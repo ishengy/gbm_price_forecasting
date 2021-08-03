@@ -17,7 +17,7 @@ amd['Date']  = pd.to_datetime(amd['Date'])
 
 def calc_returns(df):
     curr = df['Adj Close']
-    prev = df['Adj Close'].shift(1)
+    prev = df['Adj Close'].shift(1)https://github.com/ishengy/gbm_stock_prediction/blob/main/gbm_pred.py
     delta = (curr - prev) / prev
     return(delta)
 
@@ -29,13 +29,6 @@ n = 7
 dt = 1
 sim = 500
 s0 = amd['Adj Close'][0]
-
-#mu = 1
-#sigma = 0.8
-#n = 50
-#dt = 0.1
-#sim = 5
-#s0 = 100
 
 def generate_GBM(mu, sigma, dt, n, sim, s0):
     noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
@@ -49,7 +42,4 @@ rest = generate_GBM(mu, sigma, dt, n, sim, s0)
 plt.plot(rest)
 plt.xlabel("$t$")
 plt.ylabel("$x$")
-plt.title(
-    "Realizations of Geometric Brownian Motion with different variances\n $\mu=1$"
-)
 plt.show()
