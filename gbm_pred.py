@@ -17,7 +17,7 @@ amd['Date']  = pd.to_datetime(amd['Date'])
 
 def calc_returns(df):
     curr = df['Adj Close']
-    prev = df['Adj Close'].shift(1)https://github.com/ishengy/gbm_stock_prediction/blob/main/gbm_pred.py
+    prev = df['Adj Close'].shift(1)
     delta = (curr - prev) / prev
     return(delta)
 
