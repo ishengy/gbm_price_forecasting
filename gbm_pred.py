@@ -37,9 +37,9 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
-rest = generate_GBM(mu, sigma, dt, n, sim, s0)
+test = generate_GBM(mu, sigma, dt, n, sim, s0)
 
-plt.plot(rest)
+plt.plot(test)
 plt.xlabel("$t$")
 plt.ylabel("$x$")
 plt.show()
