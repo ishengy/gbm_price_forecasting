@@ -36,7 +36,7 @@ plot_hist(amd_returns)
 
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
-n = 250
+n = 7
 dt = 1
 sim = 1000
 s0 = amd['Adj Close'][0]
