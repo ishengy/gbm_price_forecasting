@@ -11,8 +11,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os 
 
-os.chdir('/Users/isheng/Downloads')
-amd = pd.read_csv('/Users/isheng/Downloads/AMD.csv')
+os.chdir('D:/Documents/Github/gbm_stock_prediction')
+amd = pd.read_csv('AMD.csv')
+
+#os.chdir('/Users/isheng/Downloads')
+#amd = pd.read_csv('/Users/isheng/Downloads/AMD.csv')
+
 amd['Date']  = pd.to_datetime(amd['Date'])
 
 def calc_returns(df):
@@ -21,13 +25,20 @@ def calc_returns(df):
     delta = (curr - prev) / prev
     return(delta)
 
+def plot_hist(data):
+    s = pd.Series(data)
+    s.plot.hist(bins=12)
+
 amd_returns = calc_returns(amd)
+
+#check if returns follows a normal distribution
+plot_hist(amd_returns)
 
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
-n = 7
+n = 250
 dt = 1
-sim = 500
+sim = 1000
 s0 = amd['Adj Close'][0]
 
 def generate_GBM(mu, sigma, dt, n, sim, s0):
@@ -38,8 +49,14 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     return(s)
 
 test = generate_GBM(mu, sigma, dt, n, sim, s0)
+plot_hist(test[1])
 
-plt.plot(test)
-plt.xlabel("$t$")
-plt.ylabel("$x$")
-plt.show()
+#plt.plot(test)
+#plt.xlabel("$t$")
+#plt.ylabel("$x$")
+#plt.show()
+
+dayMean = test.mean(axis=1)
+dayVar = test.std(axis=1)
+
+#randomly draw from x=day, N(dayMean[x],dayVar[x]) to generate line plot?
