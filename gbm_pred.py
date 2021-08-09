@@ -43,7 +43,7 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     return(s)
 
 
-n_train = 60
+n_train = 100
 amd_train = amd.iloc[:n_train]
 amd_returns = calc_returns(amd_train)
 
@@ -113,10 +113,10 @@ actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
 mse(st, sim_avg)
 mape(st, sim_avg)
 ##########################
-
-n = 100
+#7 day simuations
+n = 7
 dt = 1
-sim = 1
+sim = 100
 s0 = amd['Adj Close'][n_train]
 
 sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
@@ -151,7 +151,7 @@ dt = 1
 sim = 1
 st = amd['Adj Close'][n_train]
 
-def generate_GBM(df, dt, n_train, n, sim):
+def extended_one_day_GBM(df, dt, n_train, n, sim):
     df_train = df.iloc[:n_train]
     df_returns = calc_returns(df_train)
     
@@ -163,10 +163,7 @@ def generate_GBM(df, dt, n_train, n, sim):
     sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
     return(sim_results)
 
-noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
-s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-sim_results = np.multiply(np.array(amd['Adj Close'][n_train-1:n_train+n-1]),s.T).T
-sim_results = generate_GBM(amd, dt, n_train, n, sim)
+sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim)
 
 amd_sim = amd[['Date','Adj Close']].iloc[n_train:n_train+n]
 amd_sim['GBM Sim'] = sim_results
@@ -178,10 +175,3 @@ print(mape(st, sim_results))
 amd_sim.plot(x='Date')
 plt.title("7 Business Day Forecast")
 plt.ylabel("AMD Price")
-
-plt.hist(sim_results[1], bins=12, density=True)
-xmin, xmax = plt.xlim()
-x_axis = np.linspace(xmin, xmax, 100)
-plt.plot(x_axis, norm.pdf(x_axis, sim_avg, sim_std))
-plt.title("One-Day Simulations")
-plt.xlabel("AMD Price")
