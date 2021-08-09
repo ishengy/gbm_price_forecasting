@@ -9,16 +9,20 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os 
-from scipy.stats import norm
+from scipy.stats import norm, gaussian_kde
+import statsmodels.api as sm
+from sklearn.neighbors import KernelDensity
 
 os.chdir('D:/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
 sp500 = pd.read_csv('SPY.csv')
-
+btc = pd.read_csv('BTC.csv')
 #os.chdir('/Users/isheng/Downloads')
 #amd = pd.read_csv('/Users/isheng/Downloads/AMD.csv')
 sp500['Date']  = pd.to_datetime(sp500['Date'])
 amd['Date']  = pd.to_datetime(amd['Date'])
+btc['Date']  = pd.to_datetime(btc['Date'])
+btc.dropna(subset = ['Adj Close'], inplace=True)
 
 def calc_returns(df):
     curr = df['Adj Close']
@@ -43,9 +47,13 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
+#temp
+amd = amd
+####
+
 n_train = 100
 amd_train = amd.iloc[:n_train]
-amd_returns = calc_returns(amd_train)
+amd_returns = calc_returns(btc)
 
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
@@ -54,6 +62,23 @@ plt.hist(amd_returns, bins=12, density=True, alpha=0.6)
 xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, mu, sigma))
+plt.title("Returns Distribution")
+
+sm.qqplot(amd_returns)
+plt.title("Q-Q Plot")
+#############################
+# for btc
+kde = gaussian_kde(amd_returns[1:])
+x_axis = np.linspace(xmin, xmax, 100)
+den = kde.evaluate(x_axis)
+plt.figure()
+plt.hist(amd_returns, bins = 12, density = True)
+plt.plot(x_axis, den)
+plt.show()
+
+test = kde.resample(10000).T
+plt.hist(test)
+
 ###########################
 
 n = 7
@@ -75,19 +100,18 @@ for i in range(30,210,10):
     sim_avg = np.mean(sim_results, axis=1)[1:n+1]
     sim_std = np.std(sim_results, axis=1)[1:n+1]
     
-    plt.hist(sim_results[1], bins=12, density=True)
-    xmin, xmax = plt.xlim()
-    x_axis = np.linspace(xmin, xmax, 100)
-    plt.plot(x_axis, norm.pdf(x_axis, sim_avg[0], sim_std[0]))
-    plt.title("One-Day Simulations")
-    plt.xlabel("AMD Price")
-    
     actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
     actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
     
     list_mse.append(mse(st, sim_avg))
     list_mape.append(mape(st, sim_avg))
 
+plt.hist(sim_results[1], bins=12, density=True)
+xmin, xmax = plt.xlim()
+x_axis = np.linspace(xmin, xmax, 100)
+plt.plot(x_axis, norm.pdf(x_axis, sim_avg[0], sim_std[0]))
+plt.title("One-Day Simulations")
+plt.xlabel("AMD Price")
 ###########################
 
 n = 1
@@ -105,7 +129,7 @@ xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, sim_avg, sim_std))
 plt.title("One-Day Simulations")
-plt.xlabel("AMD Price")
+plt.xlabel("Price")
 
 actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
 actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
@@ -146,7 +170,7 @@ forecast_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape)),
 n = 1
 dt = 1
 sim = 10000
-n_train = 70
+
 training_size = []
 p_direction = []
 for i in range(30,110,10):
