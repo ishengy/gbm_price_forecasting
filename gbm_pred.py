@@ -30,7 +30,7 @@ def plot_hist(data):
     s.plot.hist(bins=12)
 
 def mse(actual, pred):
-    return(np.square(np.subtract(actual,pred).mean()))
+    return(np.square(np.subtract(actual,pred).mean(axis=0)))
 
 def mape(actual, pred): 
     return np.mean(np.abs((actual - pred) / actual)) 
@@ -41,7 +41,6 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = np.vstack([np.ones(sim), s])
     s = s0 * s.cumprod(axis=0)
     return(s)
-
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -116,7 +115,12 @@ mape(st, sim_avg)
 #7 day simuations
 n = 7
 dt = 1
-sim = 100
+sim = 1000
+n_train = 70
+amd_train = amd.iloc[:n_train]
+amd_returns = calc_returns(amd_train)
+mu = np.mean(amd_returns)
+sigma = np.std(amd_returns)
 s0 = amd['Adj Close'][n_train]
 
 sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
@@ -146,10 +150,12 @@ plt.title("One-Week Simulations")
 
 ###########################
 # i like this - replace for 1 day prediction? and say 1 day at a time prediction?
-n = 30
+# test against multiple n_trains from 30-100
+# average out mse and mape for 10000 sims
+# test on same time frame? dont think so if im running 10000 sims
+n = 7
 dt = 1
-sim = 1
-st = amd['Adj Close'][n_train]
+sim = 10000
 
 def extended_one_day_GBM(df, dt, n_train, n, sim):
     df_train = df.iloc[:n_train]
@@ -163,15 +169,59 @@ def extended_one_day_GBM(df, dt, n_train, n, sim):
     sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
     return(sim_results)
 
+list_mse = []
+list_mape = []
+training_size = []
+for i in range(30,110,10):
+    st = np.array(amd['Adj Close'][i:i+n].reset_index(drop=True))
+    sim_results = extended_one_day_GBM(amd, dt, i, n, sim)
+    list_mse.append(np.mean(mse(st, sim_results.T).T))
+    list_mape.append(mape(st, sim_results.T).T)
+    training_size.append(i)
+forecast_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape)), 
+                                 columns = ['training_size','Expected MSE','Expected MAPE'])
+
+######################################
+n = 1
+dt = 1
+sim = 10000
+n_train = 70
+training_size = []
+p_direction = []
+for i in range(30,110,10):
+    st = np.array(amd['Adj Close'][i:i+n].reset_index(drop=True))
+    s0 = np.array(amd['Adj Close'][i-1:i-1+n].reset_index(drop=True))
+    direction = (st-s0) > 0
+    sim_direction = ((extended_one_day_GBM(amd, dt, i, n, sim).T - s0) > 0) == direction
+    p_direction.append(len(sim_direction[sim_direction==True])/sim)
+    training_size.append(i)
+
+direction_accuracy = pd.DataFrame(list(zip(training_size,p_direction)), 
+                                 columns = ['training_size','P(Correct Direction)'])
+
+######################################
+n = 7
+dt = 1
+sim = 1
+n_train = 70
 sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim)
 
 amd_sim = amd[['Date','Adj Close']].iloc[n_train:n_train+n]
 amd_sim['GBM Sim'] = sim_results
-#plot_hist(test[1])
-
-print(mse(st, sim_results))
-print(mape(st, sim_results))
 
 amd_sim.plot(x='Date')
-plt.title("7 Business Day Forecast")
+plt.title("7 Business Day Forecast (training set = 70)")
 plt.ylabel("AMD Price")
+
+amd_train = amd.iloc[:n_train]
+amd_returns = calc_returns(amd_train)
+
+mu = np.mean(amd_returns)
+sigma = np.std(amd_returns)
+
+plt.hist(amd_returns, bins=12, density=True, alpha=0.6)
+xmin, xmax = plt.xlim()
+x_axis = np.linspace(xmin, xmax, 100)
+plt.plot(x_axis, norm.pdf(x_axis, mu, sigma))
+plt.xlabel("AMD Returns")
+plt.title("AMD Return Distribution")
