@@ -13,10 +13,11 @@ from scipy.stats import norm
 
 os.chdir('D:/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
+sp500 = pd.read_csv('SPY.csv')
 
 #os.chdir('/Users/isheng/Downloads')
 #amd = pd.read_csv('/Users/isheng/Downloads/AMD.csv')
-
+sp500['Date']  = pd.to_datetime(sp500['Date'])
 amd['Date']  = pd.to_datetime(amd['Date'])
 
 def calc_returns(df):
@@ -111,48 +112,8 @@ actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
 
 mse(st, sim_avg)
 mape(st, sim_avg)
-##########################
-#7 day simuations
-n = 7
-dt = 1
-sim = 1000
-n_train = 70
-amd_train = amd.iloc[:n_train]
-amd_returns = calc_returns(amd_train)
-mu = np.mean(amd_returns)
-sigma = np.std(amd_returns)
-s0 = amd['Adj Close'][n_train]
-
-sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
-st = amd['Adj Close'][n_train+1:n_train+1+n].reset_index(drop=True)
-sim_avg = np.mean(sim_results, axis=1)[1:n+1]
-sim_std = np.std(sim_results, axis=1)[1:n+1]
-
-amd_sim = amd[['Date','Adj Close']].iloc[n_train+1:n_train+1+n]
-amd_sim['GBM Average'] = sim_avg
-#plot_hist(test[1])
-
-amd_sim.plot(x='Date')
-plt.title("7 Business Day Forecast")
-plt.ylabel("AMD Price")
-
-mse(st, sim_avg)
-mape(st, sim_avg)
-
-actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
-actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
-
-plt.hist(sim_results[7], bins=12, density=True)
-xmin, xmax = plt.xlim()
-x_axis = np.linspace(xmin, xmax, 100)
-plt.plot(x_axis, norm.pdf(x_axis, sim_avg[6], sim_std[6]))
-plt.title("One-Week Simulations")
 
 ###########################
-# i like this - replace for 1 day prediction? and say 1 day at a time prediction?
-# test against multiple n_trains from 30-100
-# average out mse and mape for 10000 sims
-# test on same time frame? dont think so if im running 10000 sims
 n = 7
 dt = 1
 sim = 10000
