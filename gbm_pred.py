@@ -35,12 +35,17 @@ def mse(actual, pred):
 def mape(actual, pred): 
     return np.mean(np.abs((actual - pred) / actual)) 
 
-amd_train = amd.iloc[:100]
-amd_returns = calc_returns(amd_train)
+def generate_GBM(mu, sigma, dt, n, sim, s0):
+    noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
+    s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
+    s = np.vstack([np.ones(sim), s])
+    s = s0 * s.cumprod(axis=0)
+    return(s)
 
-#check if returns follows a normal distribution
-#bootstrap if distribution looks funky?
-#plot normal distribution line over it for comparison?
+
+n_train = 100
+amd_train = amd.iloc[:n_train]
+amd_returns = calc_returns(amd_train)
 
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
@@ -49,24 +54,49 @@ plt.hist(amd_returns, bins=12, density=True, alpha=0.6)
 xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, mu, sigma))
+###########################
+
+n = 7
+dt = 1
+sim = 10000
+list_mse = []
+list_mape = []
+for i in range(30,210,10):
+    n_train = i
+    amd_train = amd.iloc[:n_train]
+    amd_returns = calc_returns(amd_train)
+    
+    mu = np.mean(amd_returns)
+    sigma = np.std(amd_returns)
+    s0 = amd['Adj Close'][n_train]
+    
+    sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
+    st = amd['Adj Close'][n_train+1]
+    sim_avg = np.mean(sim_results, axis=1)[1:n+1]
+    sim_std = np.std(sim_results, axis=1)[1:n+1]
+    
+    plt.hist(sim_results[1], bins=12, density=True)
+    xmin, xmax = plt.xlim()
+    x_axis = np.linspace(xmin, xmax, 100)
+    plt.plot(x_axis, norm.pdf(x_axis, sim_avg[0], sim_std[0]))
+    plt.title("One-Day Simulations")
+    plt.xlabel("AMD Price")
+    
+    actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
+    actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
+    
+    list_mse.append(mse(st, sim_avg))
+    list_mape.append(mape(st, sim_avg))
 
 ###########################
+
 n = 1
 dt = 1
 sim = 10000
-s0 = amd['Adj Close'][100]
-    
-#with single day forcasting, replace s0 with the real s(t-1)????
-#with multi day forecasting, keep as is?
-def generate_GBM(mu, sigma, dt, n, sim, s0):
-    noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
-    s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-    s = np.vstack([np.ones(sim), s])
-    s = s0 * s.cumprod(axis=0)
-    return(s)
+s0 = amd['Adj Close'][n_train]
 
 sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
-st = amd['Adj Close'][101]
+st = amd['Adj Close'][n_train+1]
 sim_avg = np.mean(sim_results, axis=1)[1:n+1]
 sim_std = np.std(sim_results, axis=1)[1:n+1]
 
@@ -84,17 +114,17 @@ mse(st, sim_avg)
 mape(st, sim_avg)
 ##########################
 
-n = 7
+n = 100
 dt = 1
-sim = 10000
-s0 = amd['Adj Close'][100]
+sim = 1
+s0 = amd['Adj Close'][n_train]
 
 sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
-st = amd['Adj Close'][101:108].reset_index(drop=True)
+st = amd['Adj Close'][n_train+1:n_train+1+n].reset_index(drop=True)
 sim_avg = np.mean(sim_results, axis=1)[1:n+1]
 sim_std = np.std(sim_results, axis=1)[1:n+1]
 
-amd_sim = amd[['Date','Adj Close']].iloc[101:n+101]
+amd_sim = amd[['Date','Adj Close']].iloc[n_train+1:n_train+1+n]
 amd_sim['GBM Average'] = sim_avg
 #plot_hist(test[1])
 
@@ -114,6 +144,28 @@ x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, sim_avg[6], sim_std[6]))
 plt.title("One-Week Simulations")
 
-# predict 7 days with x number of training data
-# average it across and plot real vs average???
-# compare MSE and the probability of an up vs down prediction using Montes day by day?
+###########################
+# i like this - replace for 1 day prediction? and say 1 day at a time prediction?
+n = 100
+dt = 1
+sim = 1
+s0 = amd['Adj Close'][n_train]
+
+noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
+s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
+sim_results = np.multiply(np.array(amd['Adj Close'][n_train-1:n_train+n-1]),s.T).T
+
+amd_sim = amd[['Date','Adj Close']].iloc[n_train:n_train+n]
+amd_sim['GBM Sim'] = sim_results
+#plot_hist(test[1])
+
+amd_sim.plot(x='Date')
+plt.title("7 Business Day Forecast")
+plt.ylabel("AMD Price")
+
+plt.hist(sim_results[1], bins=12, density=True)
+xmin, xmax = plt.xlim()
+x_axis = np.linspace(xmin, xmax, 100)
+plt.plot(x_axis, norm.pdf(x_axis, sim_avg, sim_std))
+plt.title("One-Day Simulations")
+plt.xlabel("AMD Price")
