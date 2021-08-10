@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import os 
 from scipy.stats import norm, gaussian_kde
 import statsmodels.api as sm
-from sklearn.neighbors import KernelDensity
 
 os.chdir('D:/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
