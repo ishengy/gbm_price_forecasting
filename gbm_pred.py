@@ -46,13 +46,11 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
-#temp
-amd = amd
-####
-
 n_train = 100
 amd_train = amd.iloc[:n_train]
-amd_returns = calc_returns(btc)
+
+#temp
+amd_returns = calc_returns(amd)
 
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
