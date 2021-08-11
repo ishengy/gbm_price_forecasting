@@ -12,8 +12,8 @@ import os
 from scipy.stats import norm, gaussian_kde
 import statsmodels.api as sm
 
-#os.chdir('D:/Documents/Github/gbm_stock_prediction')
-os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
+os.chdir('D:/Documents/Github/gbm_stock_prediction')
+#os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
 sp500 = pd.read_csv('SPY.csv')
 btc = pd.read_csv('BTC.csv')
@@ -46,7 +46,7 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
-amd = sp500
+#amd = sp500
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -141,8 +141,11 @@ n = 30
 dt = 1
 sim = 10000
 
-def extended_one_day_GBM(df, dt, n_train, n, sim, test_start_index):
-    df_train = df.iloc[test_start_index-n_train:test_start_index-1]
+def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
+    train_start = test_start-n_train-2
+    train_end = test_start-2
+    
+    df_train = df.iloc[train_start:train_end]
     df_returns = calc_returns(df_train)
     
     mu = np.mean(df_returns)
@@ -151,8 +154,8 @@ def extended_one_day_GBM(df, dt, n_train, n, sim, test_start_index):
     noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
     s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
     #sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
-    #sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
-    sim_results = np.multiply(np.array(df['Adj Close'][221-1:221+n-1]),s.T).T
+    sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
+    #sim_results = np.multiply(np.array(df['Adj Close'][221-1:221+n-1]),s.T).T
     return(sim_results)
 
 #pick a start date and then take n number of days before that start date to use as training 
@@ -160,10 +163,12 @@ def extended_one_day_GBM(df, dt, n_train, n, sim, test_start_index):
 list_mse = []
 list_mape = []
 training_size = []
-st = np.array(amd['Adj Close'][221:251].reset_index(drop=True))
+
+test_start = 200
+st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
+
 for i in range(30,110,10):
-    #st = np.array(amd['Adj Close'][i:i+n].reset_index(drop=True))
-    sim_results = extended_one_day_GBM(amd, dt, i, n, sim)
+    sim_results = extended_one_day_GBM(amd, dt, i, n, sim, test_start)
     list_mse.append(np.mean(mse(st, sim_results.T).T))
     list_mape.append(mape(st, sim_results.T).T)
     training_size.append(i)
@@ -174,14 +179,17 @@ forecast_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape)),
 n = 1
 dt = 1
 sim = 10000
+test_start = 200
 
 training_size = []
 p_direction = []
+
+st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
+s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
+direction = (st-s0) > 0
+
 for i in range(30,110,10):
-    st = np.array(amd['Adj Close'][i:i+n].reset_index(drop=True))
-    s0 = np.array(amd['Adj Close'][i-1:i-1+n].reset_index(drop=True))
-    direction = (st-s0) > 0
-    sim_direction = ((extended_one_day_GBM(amd, dt, i, n, sim).T - s0) > 0) == direction
+    sim_direction = ((extended_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
@@ -193,7 +201,7 @@ n = 30
 dt = 1
 sim = 1
 n_train = 100
-sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim)
+sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[n_train:n_train+n]
 amd_sim['GBM Sim'] = sim_results
