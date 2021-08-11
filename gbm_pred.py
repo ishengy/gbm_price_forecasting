@@ -31,7 +31,7 @@ def calc_returns(df):
 
 def plot_hist(data):
     s = pd.Series(data)
-    s.plot.hist(bins=12)
+    s.plot.hist(bins=12, density = True)
 
 def mse(actual, pred):
     return(np.square(np.subtract(actual,pred).mean(axis=0)))
@@ -46,7 +46,7 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
-#amd = sp500
+amd = btc
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -66,7 +66,7 @@ plt.title("Returns Distribution")
 sm.qqplot(amd_returns)
 plt.title("Q-Q Plot")
 #############################
-# for btc
+# KDE
 kde = gaussian_kde(amd_returns[1:])
 x_axis = np.linspace(xmin, xmax, 100)
 den = kde.evaluate(x_axis)
@@ -76,41 +76,20 @@ plt.plot(x_axis, den)
 plt.show()
 
 test = kde.resample(10000).T
-plt.hist(test)
+plt.hist(test, density = True)
 
-########################### Delete?
+def kde_GBM(df, dt, n_train, n, sim, test_start):
+    train_start = test_start-n_train-2
+    train_end = test_start-2
+    
+    df_train = df.iloc[train_start:train_end]
+    df_returns = calc_returns(df_train)
+    
+    noise = (kde.resample(n*sim)).reshape(n,sim)
+    s = np.exp(noise)
+    sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
+    return(sim_results)
 
-n = 7
-dt = 1
-sim = 10000
-list_mse = []
-list_mape = []
-for i in range(30,210,10):
-    n_train = i
-    amd_train = amd.iloc[:n_train]
-    amd_returns = calc_returns(amd_train)
-    
-    mu = np.mean(amd_returns)
-    sigma = np.std(amd_returns)
-    s0 = amd['Adj Close'][n_train]
-    
-    sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
-    st = amd['Adj Close'][n_train+1]
-    sim_avg = np.mean(sim_results, axis=1)[1:n+1]
-    sim_std = np.std(sim_results, axis=1)[1:n+1]
-    
-    actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
-    actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
-    
-    list_mse.append(mse(st, sim_avg))
-    list_mape.append(mape(st, sim_avg))
-
-plt.hist(sim_results[1], bins=12, density=True)
-xmin, xmax = plt.xlim()
-x_axis = np.linspace(xmin, xmax, 100)
-plt.plot(x_axis, norm.pdf(x_axis, sim_avg[0], sim_std[0]))
-plt.title("One-Day Simulations")
-plt.xlabel("Price")
 ###########################
 
 n = 1
@@ -133,14 +112,7 @@ plt.xlabel("Price")
 actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
 actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
 
-mse(st, sim_avg)
-mape(st, sim_avg)
-
 ###########################
-n = 30
-dt = 1
-sim = 100000
-
 def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
@@ -156,11 +128,14 @@ def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
+n = 30
+dt = 1
+sim = 100000
+test_start = 150
 list_mse = []
 list_mape = []
 training_size = []
 
-test_start = 200
 st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
 for i in range(30,110,10):
@@ -171,12 +146,22 @@ for i in range(30,110,10):
 forecast_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape)), 
                                  columns = ['training_size','Expected MSE','Expected MAPE'])
 
-######################################
-n = 1
-dt = 1
-sim = 100000
-test_start = 200
+plt.figure()
+plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
+plt.hist(st, label = 'Test', density = True, alpha=0.8)
+plt.title('SPY Test vs Simulation')
+plt.legend()
+plt.show()
 
+train_start = test_start-n_train-2
+train_end = test_start-2
+
+plt.hist(amd['Adj Close'].iloc[train_start:train_end], label = 'Training', density = True, alpha=0.8)
+plt.hist(st, label = 'Test', density = True, alpha=0.8)
+plt.title('SPY Test vs Training')
+plt.legend()
+
+n = 1
 training_size = []
 p_direction = []
 
@@ -199,15 +184,17 @@ all_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape, p_directi
 n = 30
 dt = 1
 sim = 1
-n_train = 80
+n_train = 60
 sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("30 Business Day Forecast (training set = 80)")
-plt.ylabel("AMD Price")
+plt.title("30 Business Day Forecast (training set = 30)")
+plt.ylabel("SPY Price")
+
+######################
 
 amd_train = amd.iloc[:n_train]
 amd_returns = calc_returns(amd_train)
