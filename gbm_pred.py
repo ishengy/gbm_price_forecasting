@@ -39,6 +39,7 @@ def mse(actual, pred):
 def mape(actual, pred): 
     return np.mean(np.abs((actual - pred) / actual)) 
 
+# Delete? Replaced by multiple_one_day_GBM()
 def generate_GBM(mu, sigma, dt, n, sim, s0):
     noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
     s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
@@ -83,14 +84,21 @@ plt.show()
 test = kde.resample(10000).T
 plt.hist(test, density = True)
 
-def kde_GBM(df, dt, n_train, n, sim, test_start):  
+def kde_GBM(df, dt, n_train, n, sim, test_start):
+    train_start = test_start-n_train-2
+    train_end = test_start-2
+    
+    df_train = df.iloc[train_start:train_end]
+    df_returns = calc_returns(df_train)
+    
+    kde = gaussian_kde(df_returns[1:])
     noise = (kde.resample(n*sim)).reshape(n,sim)
     s = np.exp(noise)
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
 ###########################
-
+#Delete?
 n = 1
 dt = 1
 sim = 10000
@@ -184,14 +192,14 @@ n = 30
 dt = 1
 sim = 1
 n_train = 60
-sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+sim_results = kde_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("30 Business Day Forecast (training set = 30)")
-plt.ylabel("SPY Price")
+plt.title("KDE 30 Business Day Forecast (training set = 30)")
+plt.ylabel("Price")
 
 ######################
 
