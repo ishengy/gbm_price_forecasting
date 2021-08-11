@@ -57,7 +57,7 @@ amd_returns = calc_returns(amd)
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
 
-plt.hist(amd_returns, bins=15, density=True, alpha=0.6)
+plt.hist(amd_returns, bins=12, density=True, alpha=0.6)
 xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, mu, sigma))
@@ -67,24 +67,23 @@ sm.qqplot(amd_returns)
 plt.title("Q-Q Plot")
 #############################
 # KDE
+
+plt.figure()
 kde = gaussian_kde(amd_returns[1:])
 x_axis = np.linspace(xmin, xmax, 100)
 den = kde.evaluate(x_axis)
 plt.figure()
-plt.hist(amd_returns, bins = 15, density = True)
-plt.plot(x_axis, den)
+plt.hist(amd_returns, bins = 12, density = True)
+plt.plot(x_axis, norm.pdf(x_axis, mu, sigma), label = 'Normal')
+plt.plot(x_axis, den, label= 'KDE')
+plt.legend()
+plt.title('Returns Distribution')
 plt.show()
 
 test = kde.resample(10000).T
 plt.hist(test, density = True)
 
-def kde_GBM(df, dt, n_train, n, sim, test_start):
-    train_start = test_start-n_train-2
-    train_end = test_start-2
-    
-    df_train = df.iloc[train_start:train_end]
-    df_returns = calc_returns(df_train)
-    
+def kde_GBM(df, dt, n_train, n, sim, test_start):  
     noise = (kde.resample(n*sim)).reshape(n,sim)
     s = np.exp(noise)
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
@@ -113,7 +112,7 @@ actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
 actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
 
 ###########################
-def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
+def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
     
@@ -131,7 +130,7 @@ def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
 n = 30
 dt = 1
 sim = 100000
-test_start = 150
+test_start = 200
 list_mse = []
 list_mape = []
 training_size = []
@@ -139,7 +138,7 @@ training_size = []
 st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
 for i in range(30,110,10):
-    sim_results = extended_one_day_GBM(amd, dt, i, n, sim, test_start)
+    sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
     list_mse.append(np.mean(mse(st, sim_results.T).T))
     list_mape.append(mape(st, sim_results.T).T)
     training_size.append(i)
@@ -153,13 +152,13 @@ plt.title('SPY Test vs Simulation')
 plt.legend()
 plt.show()
 
-train_start = test_start-n_train-2
-train_end = test_start-2
+#train_start = test_start-n_train-2
+#train_end = test_start-2
 
-plt.hist(amd['Adj Close'].iloc[train_start:train_end], label = 'Training', density = True, alpha=0.8)
-plt.hist(st, label = 'Test', density = True, alpha=0.8)
-plt.title('SPY Test vs Training')
-plt.legend()
+#plt.hist(amd['Adj Close'].iloc[train_start:train_end], label = 'Training', density = True, alpha=0.8)
+#plt.hist(st, label = 'Test', density = True, alpha=0.8)
+#plt.title('SPY Test vs Training')
+#plt.legend()
 
 n = 1
 training_size = []
@@ -170,7 +169,7 @@ s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=Tru
 direction = (st-s0) > 0
 
 for i in range(30,110,10):
-    sim_direction = ((extended_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+    sim_direction = ((kde_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
@@ -185,7 +184,7 @@ n = 30
 dt = 1
 sim = 1
 n_train = 60
-sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
 amd_sim['GBM Sim'] = sim_results
