@@ -139,7 +139,7 @@ mape(st, sim_avg)
 ###########################
 n = 30
 dt = 1
-sim = 10000
+sim = 100000
 
 def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
@@ -153,13 +153,9 @@ def extended_one_day_GBM(df, dt, n_train, n, sim, test_start):
     
     noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
     s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-    #sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
-    #sim_results = np.multiply(np.array(df['Adj Close'][221-1:221+n-1]),s.T).T
     return(sim_results)
 
-#pick a start date and then take n number of days before that start date to use as training 
-#dont pick the n number of days then test on the dates right after. Former keeps testing set consistent
 list_mse = []
 list_mape = []
 training_size = []
@@ -178,7 +174,7 @@ forecast_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape)),
 ######################################
 n = 1
 dt = 1
-sim = 10000
+sim = 100000
 test_start = 200
 
 training_size = []
@@ -196,18 +192,21 @@ for i in range(30,110,10):
 direction_accuracy = pd.DataFrame(list(zip(training_size,p_direction)), 
                                  columns = ['training_size','P(Correct Direction)'])
 
+all_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape, p_direction)), 
+                                 columns = ['training_size','Expected MSE','Expected MAPE','P(Correct Direction)'])
+
 ######################################
 n = 30
 dt = 1
 sim = 1
-n_train = 100
+n_train = 80
 sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 
-amd_sim = amd[['Date','Adj Close']].iloc[n_train:n_train+n]
+amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("7 Business Day Forecast (training set = 70)")
+plt.title("30 Business Day Forecast (training set = 80)")
 plt.ylabel("AMD Price")
 
 amd_train = amd.iloc[:n_train]
