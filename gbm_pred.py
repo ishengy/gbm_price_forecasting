@@ -84,6 +84,7 @@ plt.show()
 test = kde.resample(10000).T
 plt.hist(test, density = True)
 
+# Updated - Retest functionality
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
