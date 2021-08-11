@@ -12,12 +12,12 @@ import os
 from scipy.stats import norm, gaussian_kde
 import statsmodels.api as sm
 
-os.chdir('D:/Documents/Github/gbm_stock_prediction')
+#os.chdir('D:/Documents/Github/gbm_stock_prediction')
+os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
 sp500 = pd.read_csv('SPY.csv')
 btc = pd.read_csv('BTC.csv')
-#os.chdir('/Users/isheng/Downloads')
-#amd = pd.read_csv('/Users/isheng/Downloads/AMD.csv')
+
 sp500['Date']  = pd.to_datetime(sp500['Date'])
 amd['Date']  = pd.to_datetime(amd['Date'])
 btc['Date']  = pd.to_datetime(btc['Date'])
@@ -45,6 +45,8 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = np.vstack([np.ones(sim), s])
     s = s0 * s.cumprod(axis=0)
     return(s)
+
+amd = sp500
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -76,7 +78,7 @@ plt.show()
 test = kde.resample(10000).T
 plt.hist(test)
 
-###########################
+########################### Delete?
 
 n = 7
 dt = 1
@@ -108,7 +110,7 @@ xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, sim_avg[0], sim_std[0]))
 plt.title("One-Day Simulations")
-plt.xlabel("AMD Price")
+plt.xlabel("Price")
 ###########################
 
 n = 1
@@ -135,12 +137,12 @@ mse(st, sim_avg)
 mape(st, sim_avg)
 
 ###########################
-n = 7
+n = 30
 dt = 1
 sim = 10000
 
-def extended_one_day_GBM(df, dt, n_train, n, sim):
-    df_train = df.iloc[:n_train]
+def extended_one_day_GBM(df, dt, n_train, n, sim, test_start_index):
+    df_train = df.iloc[test_start_index-n_train:test_start_index-1]
     df_returns = calc_returns(df_train)
     
     mu = np.mean(df_returns)
@@ -148,14 +150,19 @@ def extended_one_day_GBM(df, dt, n_train, n, sim):
     
     noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
     s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-    sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
+    #sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
+    #sim_results = np.multiply(np.array(df['Adj Close'][n_train-1:n_train+n-1]),s.T).T
+    sim_results = np.multiply(np.array(df['Adj Close'][221-1:221+n-1]),s.T).T
     return(sim_results)
 
+#pick a start date and then take n number of days before that start date to use as training 
+#dont pick the n number of days then test on the dates right after. Former keeps testing set consistent
 list_mse = []
 list_mape = []
 training_size = []
+st = np.array(amd['Adj Close'][221:251].reset_index(drop=True))
 for i in range(30,110,10):
-    st = np.array(amd['Adj Close'][i:i+n].reset_index(drop=True))
+    #st = np.array(amd['Adj Close'][i:i+n].reset_index(drop=True))
     sim_results = extended_one_day_GBM(amd, dt, i, n, sim)
     list_mse.append(np.mean(mse(st, sim_results.T).T))
     list_mape.append(mape(st, sim_results.T).T)
@@ -182,10 +189,10 @@ direction_accuracy = pd.DataFrame(list(zip(training_size,p_direction)),
                                  columns = ['training_size','P(Correct Direction)'])
 
 ######################################
-n = 7
+n = 30
 dt = 1
 sim = 1
-n_train = 70
+n_train = 100
 sim_results = extended_one_day_GBM(amd, dt, n_train, n, sim)
 
 amd_sim = amd[['Date','Adj Close']].iloc[n_train:n_train+n]
@@ -205,5 +212,5 @@ plt.hist(amd_returns, bins=12, density=True, alpha=0.6)
 xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
 plt.plot(x_axis, norm.pdf(x_axis, mu, sigma))
-plt.xlabel("AMD Returns")
-plt.title("AMD Return Distribution")
+plt.xlabel("Returns")
+plt.title("Return Distribution")
