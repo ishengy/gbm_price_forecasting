@@ -23,6 +23,7 @@ sp500['Date']  = pd.to_datetime(sp500['Date'])
 amd['Date']  = pd.to_datetime(amd['Date'])
 btc['Date']  = pd.to_datetime(btc['Date'])
 btc.dropna(subset = ['Adj Close'], inplace=True)
+btc.reset_index(drop=True, inplace=True)
 
 def calc_returns(df):
     curr = df['Adj Close']
@@ -67,6 +68,21 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
+def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
+    train_start = test_start-n_train-2
+    train_end = test_start-2
+    
+    df_train = df.iloc[train_start:train_end]
+    df_returns = calc_returns(df_train)
+    
+    mu = np.mean(df_returns)
+    sigma = np.std(df_returns)
+    
+    noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
+    s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
+    sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
+    return(sim_results)
+
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
@@ -80,13 +96,13 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
-#amd = sp500
+amd = btc
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
 
 #temp
-amd_returns = calc_returns(amd)
+amd_returns = calc_returns(amd_train)
 
 mu = np.mean(amd_returns)
 sigma = np.std(amd_returns)
@@ -102,8 +118,7 @@ plt.title("Q-Q Plot")
 #############################
 # KDE
 
-plt.figure()
-kde = gaussian_kde(amd_returns[1:])
+kde = gaussian_kde(amd_returns[1:], bw_method = 'silverman')
 x_axis = np.linspace(xmin, xmax, 100)
 den = kde.evaluate(x_axis)
 plt.figure()
@@ -114,7 +129,7 @@ plt.legend()
 plt.title('Returns Distribution')
 plt.show()
 
-test = kde.resample(10000).T
+test = kde.resample(1000000).T
 plt.hist(test, density = True)
 
 ###########################
@@ -140,27 +155,12 @@ actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
 actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
 
 ###########################
-def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
-    train_start = test_start-n_train-2
-    train_end = test_start-2
-    
-    df_train = df.iloc[train_start:train_end]
-    df_returns = calc_returns(df_train)
-    
-    mu = np.mean(df_returns)
-    sigma = np.std(df_returns)
-    
-    noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
-    s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-    sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
-    return(sim_results)
 
 n = 30
 dt = 1
 sim = 100000
 test_start = 200
 list_acc = []
-list_mse = []
 list_rmse = []
 list_nrmse = []
 list_mape = []
@@ -169,10 +169,9 @@ training_size = []
 st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
 for i in range(30,110,10):
-    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start)
+    sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
     acc = forecasting_acc(st, sim_results)
     list_acc.append(acc)
-    list_mse.append(np.mean(acc['mse']))
     list_rmse.append(np.mean(acc['rmse']))
     list_nrmse.append(np.mean(acc['nrmse']))
     list_mape.append(np.mean(acc['mape']))
@@ -209,27 +208,47 @@ s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=Tru
 direction = (st-s0) > 0
 
 for i in range(30,110,10):
-    sim_direction = ((multiple_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+    sim_direction = ((kde_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
-all_accuracy = pd.DataFrame(list(zip(training_size, list_mse, list_rmse, list_nrmse,list_mape, p_direction)), 
-                                 columns = ['training_size','Expected MSE','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
+                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+##########
+train_start = test_start-n_train-2
+train_end = test_start-2
+    
+df_train = amd.iloc[train_start:train_end]
+df_returns = calc_returns(df_train)
 
+mu = np.mean(df_returns)
+sigma = np.std(df_returns)
 
+noise = np.random.normal(0, np.sqrt(dt), size=(100000,1))
+e = (mu - sigma ** 2 / 2) * dt + sigma * noise
+s = np.exp(e)
+
+kde = gaussian_kde(df_returns[1:])
+noise1 = (kde.resample(1*100000)).reshape(100000,1)
+s1 = np.exp(noise1)
+
+plt.hist(e, density = True, bins =15, alpha=0.6)
+plt.hist(noise1, density = True,bins =15, alpha=0.6)
+plt.hist(df_returns, density=True, bins =15, alpha=0.6)
 ######################################
 n = 30
 dt = 1
 sim = 1
-n_train = 100
-sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+n_train = 60
+sim_results = kde_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("30 Business Day Forecast (training set = 30)")
+plt.title("30 Business Day Forecast (training set = 60)")
 plt.ylabel("Price")
+plt.xticks(rotation = 45)
 
 ######################
 
