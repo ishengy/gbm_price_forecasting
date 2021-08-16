@@ -33,18 +33,17 @@ def plot_hist(data):
     s = pd.Series(data)
     s.plot.hist(bins=12, density = True)
 
-# Delete? Replaced by nrmse()
 def mse(actual, pred):
-    return(np.square(np.subtract(actual,pred.T).mean(axis=0)))
+    return(np.square(np.subtract(actual,pred.T)).mean(axis=0))
+
+def rmse(actual, pred):
+    return(np.sqrt(mse(actual, pred.T)))
 
 def nrmse(actual, pred):
-    mse = np.square(np.subtract(actual,pred.T))
-    rmse = np.sqrt(mse)
-    nrmse = rmse/np.mean(actual)
-    return(nrmse.mean(axis=0))
+    return(rmse(actual, pred.T)/np.mean(st))
 
 def mape(actual, pred): 
-    return np.mean(np.abs((actual - pred.T) / actual)) 
+    return(np.mean(np.abs((actual - pred.T) / actual))) 
 
 # Delete? Replaced by multiple_one_day_GBM()
 def generate_GBM(mu, sigma, dt, n, sim, s0):
@@ -54,7 +53,20 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     s = s0 * s.cumprod(axis=0)
     return(s)
 
-amd = btc
+def kde_GBM(df, dt, n_train, n, sim, test_start):
+    train_start = test_start-n_train-2
+    train_end = test_start-2
+    
+    df_train = df.iloc[train_start:train_end]
+    df_returns = calc_returns(df_train)
+    
+    kde = gaussian_kde(df_returns[1:])
+    noise = (kde.resample(n*sim)).reshape(n,sim)
+    s = np.exp(noise)
+    sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
+    return(sim_results)
+
+#amd = btc
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -90,20 +102,6 @@ plt.show()
 
 test = kde.resample(10000).T
 plt.hist(test, density = True)
-
-# Updated - Retest functionality
-def kde_GBM(df, dt, n_train, n, sim, test_start):
-    train_start = test_start-n_train-2
-    train_end = test_start-2
-    
-    df_train = df.iloc[train_start:train_end]
-    df_returns = calc_returns(df_train)
-    
-    kde = gaussian_kde(df_returns[1:])
-    noise = (kde.resample(n*sim)).reshape(n,sim)
-    s = np.exp(noise)
-    sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
-    return(sim_results)
 
 ###########################
 #Delete?
@@ -155,7 +153,7 @@ st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
 for i in range(30,110,10):
     sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
-    list_nrmse.append(np.mean(nrmse(st, sim_results).T))
+    list_nrmse.append(np.mean(mse(st, sim_results).T))
     list_mape.append(mape(st, sim_results).T)
     training_size.append(i)
 
