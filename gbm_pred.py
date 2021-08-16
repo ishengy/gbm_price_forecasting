@@ -33,11 +33,18 @@ def plot_hist(data):
     s = pd.Series(data)
     s.plot.hist(bins=12, density = True)
 
+# Delete? Replaced by nrmse()
 def mse(actual, pred):
-    return(np.square(np.subtract(actual,pred).mean(axis=0)))
+    return(np.square(np.subtract(actual,pred.T).mean(axis=0)))
+
+def nrmse(actual, pred):
+    mse = np.square(np.subtract(actual,pred.T))
+    rmse = np.sqrt(mse)
+    nrmse = rmse/np.mean(actual)
+    return(nrmse.mean(axis=0))
 
 def mape(actual, pred): 
-    return np.mean(np.abs((actual - pred) / actual)) 
+    return np.mean(np.abs((actual - pred.T) / actual)) 
 
 # Delete? Replaced by multiple_one_day_GBM()
 def generate_GBM(mu, sigma, dt, n, sim, s0):
@@ -140,7 +147,7 @@ n = 30
 dt = 1
 sim = 100000
 test_start = 200
-list_mse = []
+list_nrmse = []
 list_mape = []
 training_size = []
 
@@ -148,11 +155,9 @@ st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
 for i in range(30,110,10):
     sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
-    list_mse.append(np.mean(mse(st, sim_results.T).T))
-    list_mape.append(mape(st, sim_results.T).T)
+    list_nrmse.append(np.mean(nrmse(st, sim_results).T))
+    list_mape.append(mape(st, sim_results).T)
     training_size.append(i)
-forecast_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape)), 
-                                 columns = ['training_size','Expected MSE','Expected MAPE'])
 
 plt.figure()
 plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
@@ -182,11 +187,8 @@ for i in range(30,110,10):
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
-direction_accuracy = pd.DataFrame(list(zip(training_size,p_direction)), 
-                                 columns = ['training_size','P(Correct Direction)'])
-
-all_accuracy = pd.DataFrame(list(zip(training_size,list_mse,list_mape, p_direction)), 
-                                 columns = ['training_size','Expected MSE','Expected MAPE','P(Correct Direction)'])
+all_accuracy = pd.DataFrame(list(zip(training_size,list_nrmse,list_mape, p_direction)), 
+                                 columns = ['training_size','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
 
 ######################################
 n = 30
