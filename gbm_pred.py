@@ -13,8 +13,8 @@ from scipy.stats import norm, gaussian_kde
 import statsmodels.api as sm
 from scipy.stats import ttest_ind
 
-os.chdir('D:/Documents/Github/gbm_stock_prediction')
-#os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
+#os.chdir('D:/Documents/Github/gbm_stock_prediction')
+os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
 sp500 = pd.read_csv('SPY.csv')
 btc = pd.read_csv('BTC.csv')
@@ -96,7 +96,7 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
-amd = btc
+#amd = sp500
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -184,12 +184,12 @@ for i in range(len(list_acc)):
         group2 = list_acc[j]['mse']
         mtx_signif[j][i] = ttest_ind(group1,group2)[1]
 
-plt.figure()
-plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
-plt.hist(st, label = 'Test', density = True, alpha=0.8)
-plt.title('SPY Test vs Simulation')
-plt.legend()
-plt.show()
+#plt.figure()
+#plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
+#plt.hist(st, label = 'Test', density = True, alpha=0.8)
+#plt.title('SPY Test vs Simulation')
+#plt.legend()
+#plt.show()
 
 #train_start = test_start-n_train-2
 #train_end = test_start-2
@@ -214,8 +214,25 @@ for i in range(30,110,10):
 
 all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
                                  columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
-##########
-train_start = test_start-n_train-2
+
+######################################
+n = 30
+dt = 1
+sim = 1
+n_train = 100
+sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+
+amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
+amd_sim['GBM Sim'] = sim_results
+
+amd_sim.plot(x='Date')
+plt.title("Normal 30 Business Day Forecast (training set = 100)")
+plt.ylabel("Price")
+#plt.xticks(rotation = 45)
+
+######################
+# scratch pad - Ignore
+train_start = 0
 train_end = test_start-2
     
 df_train = amd.iloc[train_start:train_end]
@@ -232,35 +249,9 @@ kde = gaussian_kde(df_returns[1:])
 noise1 = (kde.resample(1*100000)).reshape(100000,1)
 s1 = np.exp(noise1)
 
-plt.hist(e, density = True, bins =15, alpha=0.6)
-plt.hist(noise1, density = True,bins =15, alpha=0.6)
-plt.hist(df_returns, density=True, bins =15, alpha=0.6)
-######################################
-n = 30
-dt = 1
-sim = 1
-n_train = 60
-sim_results = kde_GBM(amd, dt, n_train, n, sim, test_start)
-
-amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
-amd_sim['GBM Sim'] = sim_results
-
-amd_sim.plot(x='Date')
-plt.title("30 Business Day Forecast (training set = 60)")
-plt.ylabel("Price")
-plt.xticks(rotation = 45)
-
-######################
-
-amd_train = amd.iloc[:n_train]
-amd_returns = calc_returns(amd_train)
-
-mu = np.mean(amd_returns)
-sigma = np.std(amd_returns)
-
-plt.hist(amd_returns, bins=12, density=True, alpha=0.6)
-xmin, xmax = plt.xlim()
 x_axis = np.linspace(xmin, xmax, 100)
-plt.plot(x_axis, norm.pdf(x_axis, mu, sigma))
-plt.xlabel("Returns")
-plt.title("Return Distribution")
+den = kde.evaluate(x_axis)
+plt.plot(x_axis, norm.pdf(x_axis, mu, sigma), label = 'Normal')
+plt.plot(x_axis,den)
+plt.hist(df_returns, density=True, bins=15, alpha=0.6)
+plt.hist(noise1, density=True, bins=15, alpha=0.6)
