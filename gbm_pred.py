@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import os 
 from scipy.stats import norm, gaussian_kde
 import statsmodels.api as sm
+from scipy.stats import ttest_ind
 
 os.chdir('D:/Documents/Github/gbm_stock_prediction')
 #os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
@@ -37,13 +38,26 @@ def mse(actual, pred):
     return(np.square(np.subtract(actual,pred.T)).mean(axis=0))
 
 def rmse(actual, pred):
-    return(np.sqrt(mse(actual, pred.T)))
+    return(np.sqrt(mse(actual, pred)))
 
 def nrmse(actual, pred):
-    return(rmse(actual, pred.T)/np.mean(st))
+    return(rmse(actual, pred)/np.mean(actual))
 
 def mape(actual, pred): 
-    return(np.mean(np.abs((actual - pred.T) / actual))) 
+    return(np.mean(np.abs((actual - pred.T) / actual)))
+
+def forecasting_acc(actual, pred):
+    d = dict()
+    mape = np.abs((actual - pred.T) / actual).mean(axis = 0)
+    mse = np.square(np.subtract(actual,pred.T)).mean(axis = 0)
+    rmse = np.sqrt(mse)
+    nrmse = rmse/np.mean(actual)
+    
+    d['mape'] = mape
+    d['mse'] = mse
+    d['rmse'] = rmse
+    d['nrmse'] = nrmse
+    return(d)
 
 # Delete? Replaced by multiple_one_day_GBM()
 def generate_GBM(mu, sigma, dt, n, sim, s0):
@@ -66,7 +80,7 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
-#amd = btc
+#amd = sp500
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -145,6 +159,9 @@ n = 30
 dt = 1
 sim = 100000
 test_start = 200
+list_acc = []
+list_mse = []
+list_rmse = []
 list_nrmse = []
 list_mape = []
 training_size = []
@@ -152,10 +169,21 @@ training_size = []
 st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
 for i in range(30,110,10):
-    sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
-    list_nrmse.append(np.mean(mse(st, sim_results).T))
-    list_mape.append(mape(st, sim_results).T)
+    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start)
+    acc = forecasting_acc(st, sim_results)
+    list_acc.append(acc)
+    list_mse.append(np.mean(acc['mse']))
+    list_rmse.append(np.mean(acc['rmse']))
+    list_nrmse.append(np.mean(acc['nrmse']))
+    list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
+
+mtx_signif = np.zeros((8,8))
+for i in range(len(list_acc)):
+    group1 = list_acc[i]['mse']
+    for j in reversed(range(i+1,len(list_acc))):
+        group2 = list_acc[j]['mse']
+        mtx_signif[j][i] = ttest_ind(group1,group2)[1]
 
 plt.figure()
 plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
@@ -181,25 +209,26 @@ s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=Tru
 direction = (st-s0) > 0
 
 for i in range(30,110,10):
-    sim_direction = ((kde_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+    sim_direction = ((multiple_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
-all_accuracy = pd.DataFrame(list(zip(training_size,list_nrmse,list_mape, p_direction)), 
-                                 columns = ['training_size','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+all_accuracy = pd.DataFrame(list(zip(training_size, list_mse, list_rmse, list_nrmse,list_mape, p_direction)), 
+                                 columns = ['training_size','Expected MSE','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+
 
 ######################################
 n = 30
 dt = 1
 sim = 1
-n_train = 60
-sim_results = kde_GBM(amd, dt, n_train, n, sim, test_start)
+n_train = 100
+sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("KDE 30 Business Day Forecast (training set = 30)")
+plt.title("30 Business Day Forecast (training set = 30)")
 plt.ylabel("Price")
 
 ######################
