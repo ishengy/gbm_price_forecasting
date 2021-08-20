@@ -13,8 +13,8 @@ from scipy.stats import norm, gaussian_kde
 import statsmodels.api as sm
 from scipy.stats import ttest_ind
 
-#os.chdir('D:/Documents/Github/gbm_stock_prediction')
-os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
+os.chdir('D:/Documents/Github/gbm_stock_prediction')
+#os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
 amd = pd.read_csv('AMD.csv')
 sp500 = pd.read_csv('SPY.csv')
 btc = pd.read_csv('BTC.csv')
@@ -74,7 +74,7 @@ def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     
     df_train = df.iloc[train_start:train_end]
     df_returns = calc_returns(df_train)
-    
+
     mu = np.mean(df_returns)
     sigma = np.std(df_returns)
     
@@ -166,7 +166,7 @@ list_nrmse = []
 list_mape = []
 training_size = []
 
-st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
+st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 
 for i in range(30,110,10):
     sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
@@ -216,6 +216,7 @@ all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_m
                                  columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
 
 ######################################
+# 1 sample 30 day path
 n = 30
 dt = 1
 sim = 1
@@ -229,6 +230,26 @@ amd_sim.plot(x='Date')
 plt.title("Normal 30 Business Day Forecast (training set = 100)")
 plt.ylabel("Price")
 #plt.xticks(rotation = 45)
+
+######################
+n = 30
+dt = 1
+sim = 10000
+test_start = 100
+list_acc = []
+list_rmse = []
+list_nrmse = []
+list_mape = []
+training_size = []
+
+st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
+
+#for i in range(30,110,10):
+for j in range(0,31):
+    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start+j)
+
+
+
 
 ######################
 # scratch pad - Ignore
@@ -255,3 +276,25 @@ plt.plot(x_axis, norm.pdf(x_axis, mu, sigma), label = 'Normal')
 plt.plot(x_axis,den)
 plt.hist(df_returns, density=True, bins=15, alpha=0.6)
 plt.hist(noise1, density=True, bins=15, alpha=0.6)
+
+##############
+
+n_train = 30
+df=amd
+train_start = test_start-n_train-1
+train_end = test_start-1
+    
+df_train = df.iloc[train_start:train_end]
+df_returns = calc_returns(df_train)
+    
+print(df_returns)
+print(df['Date'][test_start-1:test_start-1+n])
+st = amd[['Date','Adj Close']][test_start-1:test_start-1+n]
+print(st)
+
+mu = np.mean(df_returns)
+sigma = np.std(df_returns)
+    
+noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
+s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
+sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
