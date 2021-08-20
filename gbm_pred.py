@@ -60,14 +60,6 @@ def forecasting_acc(actual, pred):
     d['nrmse'] = nrmse
     return(d)
 
-# Delete? Replaced by multiple_one_day_GBM()
-def generate_GBM(mu, sigma, dt, n, sim, s0):
-    noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
-    s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-    s = np.vstack([np.ones(sim), s])
-    s = s0 * s.cumprod(axis=0)
-    return(s)
-
 def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     #start for loop here? and set size of noise to (1,sim)? maybe not tbh
     #for(i in range(0,days)):
@@ -133,28 +125,6 @@ plt.show()
 
 test = kde.resample(1000000).T
 plt.hist(test, density = True)
-
-###########################
-#Delete?
-n = 1
-dt = 1
-sim = 10000
-s0 = amd['Adj Close'][n_train]
-
-sim_results = generate_GBM(mu, sigma, dt, n, sim, s0)
-st = amd['Adj Close'][n_train+1]
-sim_avg = np.mean(sim_results, axis=1)[1:n+1]
-sim_std = np.std(sim_results, axis=1)[1:n+1]
-
-plt.hist(sim_results[1], bins=12, density=True)
-xmin, xmax = plt.xlim()
-x_axis = np.linspace(xmin, xmax, 100)
-plt.plot(x_axis, norm.pdf(x_axis, sim_avg, sim_std))
-plt.title("One-Day Simulations")
-plt.xlabel("Price")
-
-actual_pdf = norm.pdf(st, loc=sim_avg, scale=sim_std)
-actual_cdf = norm.cdf(st, loc=sim_avg, scale=sim_std)
 
 ###########################
 
