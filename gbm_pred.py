@@ -69,6 +69,8 @@ def generate_GBM(mu, sigma, dt, n, sim, s0):
     return(s)
 
 def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
+    #start for loop here? and set size of noise to (1,sim)? maybe not tbh
+    #for(i in range(0,days)):
     train_start = test_start-n_train-2
     train_end = test_start-2
     
@@ -232,9 +234,10 @@ plt.ylabel("Price")
 #plt.xticks(rotation = 45)
 
 ######################
+# moving test data
 n = 30
 dt = 1
-sim = 10000
+sim = 1000
 test_start = 100
 list_acc = []
 list_rmse = []
@@ -244,9 +247,9 @@ training_size = []
 
 st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 
-#for i in range(30,110,10):
 for j in range(0,31):
-    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start+j)
+    for i in range(30,110,10):
+        sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start+j)
 
 
 
