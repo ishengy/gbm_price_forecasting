@@ -251,9 +251,6 @@ for j in range(0,31):
     for i in range(30,110,10):
         sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start+j)
 
-
-
-
 ######################
 # scratch pad - Ignore
 train_start = 0
