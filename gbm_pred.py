@@ -63,7 +63,7 @@ def forecasting_acc(actual, pred):
 def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
-    # change to df_train = df['adj cose'][train_start:train_end]??
+
     df_train = df.iloc[train_start:train_end]
     df_returns = calc_returns(df_train)
 
@@ -77,7 +77,7 @@ def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
 
 def test_GBM(df, dt, n_train, n, start_index):
     sim_results = np.zeros(shape=(0,n))
-    for i in range(1,n_train+1):
+    for i in range(0,n_train):
         test_start = start_index + i
         print(df['Date'][test_start-1:test_start])
         
@@ -93,8 +93,16 @@ def test_GBM(df, dt, n_train, n, start_index):
         noise = np.random.normal(0, np.sqrt(dt), size=(1,n))
         s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
         sim = np.multiply(np.array(amd['Adj Close'][test_start-1:test_start]),s.T).T
-        sim_results = np.append(sim_results,sim, axis = 0)
+        sim_results = np.append(sim_results,sim, axis = 0)    
+    print(df['Date'][test_start-1:test_start-1+n])
     return(sim_results)
+
+n = 30
+dt = 1
+sim = 1
+n_train = 100
+a = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+b = test_GBM(amd, dt, n, sim, test_start)
 
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
