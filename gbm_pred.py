@@ -96,28 +96,6 @@ def test_GBM(df, dt, n_train, n, start_index):
         sim_results = np.append(sim_results,sim, axis = 0)
     return(sim_results)
 
-sim = 200
-dt = 1
-test_start = 100
-n_train = 30
-
-test = test_GBM(amd, dt, n_train, sim, test_start)
-
-test_start = test_start + i
-train_start = test_start-n_train-2
-train_end = test_start-2
-        
-df_train = amd.iloc[train_start:train_end]
-df_returns = calc_returns(df_train)
-    
-mu = np.mean(df_returns)
-sigma = np.std(df_returns)
-        
-noise = np.random.normal(0, np.sqrt(dt), size=(1,sim))
-s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)    
-sim1 = np.multiply(np.array(amd['Adj Close'][test_start-1:test_start]),s.T).T
-sim_results = np.append(sim_results,sim1, axis = 0)
-
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
