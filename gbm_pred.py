@@ -76,6 +76,7 @@ def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     print(df['Date'][test_start-1:test_start-1+n])
     return(sim_results)
 
+################ deprecate?
 def test_GBM(df, dt, n_train, n, sim, start_index):
     sim_results = np.zeros(shape=(0,sim))
     for i in range(0,n):
@@ -98,7 +99,7 @@ def test_GBM(df, dt, n_train, n, sim, start_index):
     return(sim_results)
 
 
-def test_GBM1(df, dt, n_train, n, sim, start_index):
+def moving_GBM(df, dt, n_train, n, sim, start_index):
     sim_results = np.zeros(shape=(0,sim))
     for i in range(0,n):
         test_start = start_index + i
@@ -114,7 +115,7 @@ sim = 1000
 n_train = 30
 a = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 b = test_GBM(amd, dt, n_train, n, sim, test_start)
-c = test_GBM1(amd, dt, n_train, n, sim, test_start)
+c = moving_GBM(amd, dt, n_train, n, sim, test_start)
 
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
