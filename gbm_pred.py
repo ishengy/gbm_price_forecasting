@@ -98,7 +98,6 @@ def test_GBM(df, dt, n_train, n, sim, start_index):
         print(df['Date'][test_start-1:test_start])
     return(sim_results)
 
-
 def moving_GBM(df, dt, n_train, n, sim, start_index):
     sim_results = np.zeros(shape=(0,sim))
     for i in range(0,n):
@@ -108,6 +107,7 @@ def moving_GBM(df, dt, n_train, n, sim, start_index):
     print(df['Date'][test_start-1:test_start])
     return(sim_results)
 
+###### delete #######
 test_start = 100
 n = 30
 dt = 1
@@ -116,6 +116,7 @@ n_train = 30
 a = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 b = test_GBM(amd, dt, n_train, n, sim, test_start)
 c = moving_GBM(amd, dt, n_train, n, sim, test_start)
+##############
 
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
@@ -170,8 +171,8 @@ plt.hist(test, density = True)
 
 n = 30
 dt = 1
-sim = 100000
-test_start = 200
+sim = 10000
+test_start = 150
 list_acc = []
 list_rmse = []
 list_nrmse = []
@@ -180,8 +181,10 @@ training_size = []
 
 st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 
-for i in range(30,110,10):
-    sim_results = kde_GBM(amd, dt, i, n, sim, test_start)
+#moving_GBM(amd, dt, n_train, n, sim, test_start)
+
+for i in range(20,110,10):
+    sim_results = moving_GBM(amd, dt, i, n, sim, test_start)
     acc = forecasting_acc(st, sim_results)
     list_acc.append(acc)
     list_rmse.append(np.mean(acc['rmse']))
@@ -189,7 +192,7 @@ for i in range(30,110,10):
     list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
 
-mtx_signif = np.zeros((8,8))
+mtx_signif = np.zeros((9,9))
 for i in range(len(list_acc)):
     group1 = list_acc[i]['mse']
     for j in reversed(range(i+1,len(list_acc))):
@@ -219,8 +222,8 @@ st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 direction = (st-s0) > 0
 
-for i in range(30,110,10):
-    sim_direction = ((kde_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+for i in range(20,150,10):
+    sim_direction = ((moving_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
