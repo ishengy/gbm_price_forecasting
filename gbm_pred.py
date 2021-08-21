@@ -102,11 +102,10 @@ def test_GBM1(df, dt, n_train, n, sim, start_index):
     sim_results = np.zeros(shape=(0,sim))
     for i in range(0,n+1):
         test_start = start_index + i
-        #print(df['Date'][test_start-1:test_start])
         sim_run = multiple_one_day_GBM(df, dt, n_train, 1, sim, test_start)
         sim_results = np.append(sim_results,sim_run, axis = 0)
     print(df['Date'][test_start-1:test_start])
-    return(sim_results)
+    return(sim_results[:-1, :])
 
 test_start = 100
 n = 30
