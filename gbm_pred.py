@@ -75,11 +75,11 @@ def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
-def test_GBM(df, dt, n_train, n, sim, test_start):
-    sim_results = np.zeros(shape=(0,sim))
-    for i in range(1,n+1):
-        test_start = test_start + i
-        print(df['Date'][test_start-1:test_start-1])
+def test_GBM(df, dt, n_train, n, start_index):
+    sim_results = np.zeros(shape=(0,n))
+    for i in range(1,n_train+1):
+        test_start = start_index + i
+        print(df['Date'][test_start-1:test_start])
         
         train_start = test_start-n_train-2
         train_end = test_start-2
@@ -90,20 +90,19 @@ def test_GBM(df, dt, n_train, n, sim, test_start):
         mu = np.mean(df_returns)
         sigma = np.std(df_returns)
         
-        noise = np.random.normal(0, np.sqrt(dt), size=(1,sim))
+        noise = np.random.normal(0, np.sqrt(dt), size=(1,n))
         s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-        print(amd['Date'][test_start-1:test_start])
         sim = np.multiply(np.array(amd['Adj Close'][test_start-1:test_start]),s.T).T
         sim_results = np.append(sim_results,sim, axis = 0)
-        print('appended')
     return(sim_results)
 
 sim = 200
-sim_results = np.zeros(shape=(0,sim))
-i = 1
 dt = 1
 test_start = 100
 n_train = 30
+
+test = test_GBM(amd, dt, n_train, sim, test_start)
+
 test_start = test_start + i
 train_start = test_start-n_train-2
 train_end = test_start-2
