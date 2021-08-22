@@ -76,28 +76,6 @@ def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     print(df['Date'][test_start-1:test_start-1+n])
     return(sim_results)
 
-################ deprecate?
-def test_GBM(df, dt, n_train, n, sim, start_index):
-    sim_results = np.zeros(shape=(0,sim))
-    for i in range(0,n):
-        test_start = start_index + i
-               
-        train_start = test_start-n_train-2
-        train_end = test_start-2
-        
-        df_train = df.iloc[train_start:train_end]
-        df_returns = calc_returns(df_train)
-    
-        mu = np.mean(df_returns)
-        sigma = np.std(df_returns)
-        
-        noise = np.random.normal(0, np.sqrt(dt), size=(1,sim))
-        s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-        sim_run = np.multiply(np.array(amd['Adj Close'][test_start-1:test_start]),s.T).T
-        sim_results = np.append(sim_results,sim_run, axis = 0)
-        print(df['Date'][test_start-1:test_start])
-    return(sim_results)
-
 def moving_GBM(df, dt, n_train, n, sim, start_index):
     sim_results = np.zeros(shape=(0,sim))
     for i in range(0,n):
@@ -106,17 +84,6 @@ def moving_GBM(df, dt, n_train, n, sim, start_index):
         sim_results = np.append(sim_results,sim_run, axis = 0)
     print(df['Date'][test_start-1:test_start])
     return(sim_results)
-
-###### delete #######
-test_start = 100
-n = 30
-dt = 1
-sim = 1000
-n_train = 30
-a = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
-b = test_GBM(amd, dt, n_train, n, sim, test_start)
-c = moving_GBM(amd, dt, n_train, n, sim, test_start)
-##############
 
 def kde_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
@@ -131,7 +98,7 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
-#amd = sp500
+amd = btc
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -169,10 +136,10 @@ plt.hist(test, density = True)
 
 ###########################
 
-n = 30
+n = 120
 dt = 1
 sim = 10000
-test_start = 150
+test_start = n
 list_acc = []
 list_rmse = []
 list_nrmse = []
@@ -181,10 +148,8 @@ training_size = []
 
 st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 
-#moving_GBM(amd, dt, n_train, n, sim, test_start)
-
-for i in range(20,110,10):
-    sim_results = moving_GBM(amd, dt, i, n, sim, test_start)
+for i in range(30,110,10):
+    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start)
     acc = forecasting_acc(st, sim_results)
     list_acc.append(acc)
     list_rmse.append(np.mean(acc['rmse']))
@@ -192,27 +157,17 @@ for i in range(20,110,10):
     list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
 
-mtx_signif = np.zeros((9,9))
+dim = len(training_size)
+mtx_signif = np.zeros((dim,dim))
 for i in range(len(list_acc)):
     group1 = list_acc[i]['mse']
     for j in reversed(range(i+1,len(list_acc))):
         group2 = list_acc[j]['mse']
         mtx_signif[j][i] = ttest_ind(group1,group2)[1]
-
-#plt.figure()
-#plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
-#plt.hist(st, label = 'Test', density = True, alpha=0.8)
-#plt.title('SPY Test vs Simulation')
-#plt.legend()
-#plt.show()
-
-#train_start = test_start-n_train-2
-#train_end = test_start-2
-
-#plt.hist(amd['Adj Close'].iloc[train_start:train_end], label = 'Training', density = True, alpha=0.8)
-#plt.hist(st, label = 'Test', density = True, alpha=0.8)
-#plt.title('SPY Test vs Training')
-#plt.legend()
+mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
+mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
+mtx_signif['index'] = list(range(30,110,10))
+mtx_signif = mtx_signif.set_index('index')
 
 n = 1
 training_size = []
@@ -222,8 +177,8 @@ st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 direction = (st-s0) > 0
 
-for i in range(20,150,10):
-    sim_direction = ((moving_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+for i in range(30,110,10):
+    sim_direction = ((multiple_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
@@ -235,16 +190,16 @@ all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_m
 n = 30
 dt = 1
 sim = 1
-n_train = 100
-sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+n_train = 50
+sim_results = moving_GBM(amd, dt, n_train, n, sim, test_start)
 
-amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
+amd_sim = amd[['Date','Adj Close']].iloc[test_start-1:test_start+n-1]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("Normal 30 Business Day Forecast (training set = 100)")
+plt.title("Normal 30 Business Day Forecast (training set = 50)")
 plt.ylabel("Price")
-#plt.xticks(rotation = 45)
+plt.xticks(rotation = 45)
 
 ######################
 # moving test data
@@ -290,24 +245,52 @@ plt.plot(x_axis,den)
 plt.hist(df_returns, density=True, bins=15, alpha=0.6)
 plt.hist(noise1, density=True, bins=15, alpha=0.6)
 
-##############
+###########################
+#non stationary
+n = 120
+dt = 1
+sim = 10000
+list_acc = []
+list_rmse = []
+list_nrmse = []
+list_mape = []
+training_size = []
 
-n_train = 30
-df=amd
-train_start = test_start-n_train-1
-train_end = test_start-1
-    
-df_train = df.iloc[train_start:train_end]
-df_returns = calc_returns(df_train)
-    
-print(df_returns)
-print(df['Date'][test_start-1:test_start-1+n])
-st = amd[['Date','Adj Close']][test_start-1:test_start-1+n]
-print(st)
+for i in range(30,110,10):
+    test_start = i+2
+    st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
+    sim_results = moving_GBM(amd, dt, i, n, sim, test_start)
+    acc = forecasting_acc(st, sim_results)
+    list_acc.append(acc)
+    list_rmse.append(np.mean(acc['rmse']))
+    list_nrmse.append(np.mean(acc['nrmse']))
+    list_mape.append(np.mean(acc['mape']))
+    training_size.append(i)
 
-mu = np.mean(df_returns)
-sigma = np.std(df_returns)
-    
-noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
-s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
-sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
+dim = len(training_size)
+mtx_signif = np.zeros((dim,dim))
+for i in range(len(list_acc)):
+    group1 = list_acc[i]['mse']
+    for j in reversed(range(i+1,len(list_acc))):
+        group2 = list_acc[j]['mse']
+        mtx_signif[j][i] = ttest_ind(group1,group2)[1]
+mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
+mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
+mtx_signif['index'] = list(range(30,110,10))
+mtx_signif = mtx_signif.set_index('index')
+
+n = 1
+training_size = []
+p_direction = []
+
+for i in range(30,110,10):
+    test_start = i+2
+    st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
+    s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
+    direction = (st-s0) > 0
+    sim_direction = ((moving_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+    p_direction.append(len(sim_direction[sim_direction==True])/sim)
+    training_size.append(i)
+
+all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
+                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
