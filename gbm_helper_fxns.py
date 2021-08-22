@@ -57,7 +57,6 @@ def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
     noise = np.random.normal(0, np.sqrt(dt), size=(n,sim))
     s = np.exp((mu - sigma ** 2 / 2) * dt + sigma * noise)
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
-    print(df['Date'][test_start-1:test_start-1+n])
     return(sim_results)
 
 def moving_GBM(df, dt, n_train, n, sim, start_index):
@@ -66,7 +65,6 @@ def moving_GBM(df, dt, n_train, n, sim, start_index):
         test_start = start_index + i
         sim_run = multiple_one_day_GBM(df, dt, n_train, 1, sim, test_start)
         sim_results = np.append(sim_results,sim_run, axis = 0)
-    print(df['Date'][test_start-1:test_start])
     return(sim_results)
 
 def kde_GBM(df, dt, n_train, n, sim, test_start):
