@@ -98,6 +98,7 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
+###############################
 amd = btc
 
 n_train = 100
@@ -117,26 +118,10 @@ plt.title("Returns Distribution")
 
 sm.qqplot(amd_returns)
 plt.title("Q-Q Plot")
-#############################
-# KDE
-
-kde = gaussian_kde(amd_returns[1:], bw_method = 'silverman')
-x_axis = np.linspace(xmin, xmax, 100)
-den = kde.evaluate(x_axis)
-plt.figure()
-plt.hist(amd_returns, bins = 12, density = True)
-plt.plot(x_axis, norm.pdf(x_axis, mu, sigma), label = 'Normal')
-plt.plot(x_axis, den, label= 'KDE')
-plt.legend()
-plt.title('Returns Distribution')
-plt.show()
-
-test = kde.resample(1000000).T
-plt.hist(test, density = True)
 
 ###########################
 
-n = 120
+n = 30
 dt = 1
 sim = 10000
 test_start = n
@@ -219,34 +204,59 @@ for j in range(0,31):
     for i in range(30,110,10):
         sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start+j)
 
-######################
-# scratch pad - Ignore
-train_start = 0
-train_end = test_start-2
-    
-df_train = amd.iloc[train_start:train_end]
-df_returns = calc_returns(df_train)
+###########################
+# stationary prolonged
+n = 120
+dt = 1
+sim = 10000
+test_start = n
+list_acc = []
+list_rmse = []
+list_nrmse = []
+list_mape = []
+training_size = []
 
-mu = np.mean(df_returns)
-sigma = np.std(df_returns)
+st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 
-noise = np.random.normal(0, np.sqrt(dt), size=(100000,1))
-e = (mu - sigma ** 2 / 2) * dt + sigma * noise
-s = np.exp(e)
+for i in range(30,110,10):
+    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start)
+    acc = forecasting_acc(st, sim_results)
+    list_acc.append(acc)
+    list_rmse.append(np.mean(acc['rmse']))
+    list_nrmse.append(np.mean(acc['nrmse']))
+    list_mape.append(np.mean(acc['mape']))
+    training_size.append(i)
 
-kde = gaussian_kde(df_returns[1:])
-noise1 = (kde.resample(1*100000)).reshape(100000,1)
-s1 = np.exp(noise1)
+dim = len(training_size)
+mtx_signif = np.zeros((dim,dim))
+for i in range(len(list_acc)):
+    group1 = list_acc[i]['mse']
+    for j in reversed(range(i+1,len(list_acc))):
+        group2 = list_acc[j]['mse']
+        mtx_signif[j][i] = ttest_ind(group1,group2)[1]
+mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
+mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
+mtx_signif['index'] = list(range(30,110,10))
+mtx_signif = mtx_signif.set_index('index')
 
-x_axis = np.linspace(xmin, xmax, 100)
-den = kde.evaluate(x_axis)
-plt.plot(x_axis, norm.pdf(x_axis, mu, sigma), label = 'Normal')
-plt.plot(x_axis,den)
-plt.hist(df_returns, density=True, bins=15, alpha=0.6)
-plt.hist(noise1, density=True, bins=15, alpha=0.6)
+n = 1
+training_size = []
+p_direction = []
+
+st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
+s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
+direction = (st-s0) > 0
+
+for i in range(30,110,10):
+    sim_direction = ((multiple_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+    p_direction.append(len(sim_direction[sim_direction==True])/sim)
+    training_size.append(i)
+
+all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
+                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
 
 ###########################
-#non stationary
+#non stationary 
 n = 120
 dt = 1
 sim = 10000
