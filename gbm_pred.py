@@ -150,8 +150,8 @@ st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=Tru
 
 #moving_GBM(amd, dt, n_train, n, sim, test_start)
 
-for i in range(20,110,10):
-    sim_results = moving_GBM(amd, dt, i, n, sim, test_start)
+for i in range(30,110,10):
+    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start)
     acc = forecasting_acc(st, sim_results)
     list_acc.append(acc)
     list_rmse.append(np.mean(acc['rmse']))
@@ -159,12 +159,17 @@ for i in range(20,110,10):
     list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
 
-mtx_signif = np.zeros((9,9))
+dim = len(training_size)
+mtx_signif = np.zeros((dim,dim))
 for i in range(len(list_acc)):
     group1 = list_acc[i]['mse']
     for j in reversed(range(i+1,len(list_acc))):
         group2 = list_acc[j]['mse']
         mtx_signif[j][i] = ttest_ind(group1,group2)[1]
+mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
+mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
+mtx_signif['index'] = list(range(30,110,10))
+mtx_signif = mtx_signif.set_index('index')
 
 #plt.figure()
 #plt.hist(sim_results[:,0], label = 'Sample Simulation', density = True, alpha=0.8)
@@ -189,8 +194,8 @@ st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
 s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 direction = (st-s0) > 0
 
-for i in range(20,150,10):
-    sim_direction = ((moving_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+for i in range(30,110,10):
+    sim_direction = ((multiple_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
