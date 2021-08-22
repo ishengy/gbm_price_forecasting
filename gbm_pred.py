@@ -98,7 +98,7 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
 
-#amd = sp500
+amd = btc
 
 n_train = 100
 amd_train = amd.iloc[:n_train]
@@ -136,7 +136,7 @@ plt.hist(test, density = True)
 
 ###########################
 
-n = 30
+n = 120
 dt = 1
 sim = 10000
 test_start = 150
@@ -148,10 +148,8 @@ training_size = []
 
 st = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
 
-#moving_GBM(amd, dt, n_train, n, sim, test_start)
-
 for i in range(30,110,10):
-    sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start)
+    sim_results = moving_GBM(amd, dt, i, n, sim, test_start)
     acc = forecasting_acc(st, sim_results)
     list_acc.append(acc)
     list_rmse.append(np.mean(acc['rmse']))
@@ -195,7 +193,7 @@ s0 = np.array(amd['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=Tru
 direction = (st-s0) > 0
 
 for i in range(30,110,10):
-    sim_direction = ((multiple_one_day_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
+    sim_direction = ((moving_GBM(amd, dt, i, n, sim, test_start).T - s0) > 0) == direction
     p_direction.append(len(sim_direction[sim_direction==True])/sim)
     training_size.append(i)
 
@@ -207,16 +205,16 @@ all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_m
 n = 30
 dt = 1
 sim = 1
-n_train = 100
-sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
+n_train = 50
+sim_results = moving_GBM(amd, dt, n_train, n, sim, test_start)
 
-amd_sim = amd[['Date','Adj Close']].iloc[test_start:test_start+n]
+amd_sim = amd[['Date','Adj Close']].iloc[test_start-1:test_start+n-1]
 amd_sim['GBM Sim'] = sim_results
 
 amd_sim.plot(x='Date')
-plt.title("Normal 30 Business Day Forecast (training set = 100)")
+plt.title("Normal 30 Business Day Forecast (training set = 50)")
 plt.ylabel("Price")
-#plt.xticks(rotation = 45)
+plt.xticks(rotation = 45)
 
 ######################
 # moving test data
