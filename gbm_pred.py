@@ -176,7 +176,8 @@ n = 30
 dt = 1
 sim = 1
 n_train = 50
-sim_results = moving_GBM(amd, dt, n_train, n, sim, test_start)
+test_start = 150
+sim_results = multiple_one_day_GBM(amd, dt, n_train, n, sim, test_start)
 
 amd_sim = amd[['Date','Adj Close']].iloc[test_start-1:test_start+n-1]
 amd_sim['GBM Sim'] = sim_results
@@ -185,24 +186,6 @@ amd_sim.plot(x='Date')
 plt.title("Normal 30 Business Day Forecast (training set = 50)")
 plt.ylabel("Price")
 plt.xticks(rotation = 45)
-
-######################
-# moving test data
-n = 30
-dt = 1
-sim = 1000
-test_start = 100
-list_acc = []
-list_rmse = []
-list_nrmse = []
-list_mape = []
-training_size = []
-
-st = np.array(amd['Adj Close'][test_start:test_start+n].reset_index(drop=True))
-
-for j in range(0,31):
-    for i in range(30,110,10):
-        sim_results = multiple_one_day_GBM(amd, dt, i, n, sim, test_start+j)
 
 ###########################
 # stationary prolonged
