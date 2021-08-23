@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import os 
 from scipy.stats import norm
 import statsmodels.api as sm
-from scipy.stats import ttest_ind
 
 os.chdir('D:/Documents/Github/gbm_stock_prediction')
 #os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
@@ -29,6 +28,7 @@ btc.dropna(subset = ['Adj Close'], inplace=True)
 btc.reset_index(drop=True, inplace=True)
 
 #%%
+#checking normality assumption
 df_asset = amd
 n_train = 100
 df_train = df_asset.iloc[:n_train]
@@ -51,49 +51,20 @@ n = 30
 dt = 1
 sim = 10000
 test_start = 150
-list_acc = []
-list_rmse = []
-list_nrmse = []
-list_mape = []
-training_size = []
+size_start = 30
+size_end = 110
 
-st = np.array(df_asset['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
-
-for i in range(30,110,10):
-    sim_results = gbm.multiple_one_day_GBM(df_asset, dt, i, n, sim, test_start)
-    acc = gbm.forecasting_acc(st, sim_results)
-    list_acc.append(acc)
-    list_rmse.append(np.mean(acc['rmse']))
-    list_nrmse.append(np.mean(acc['nrmse']))
-    list_mape.append(np.mean(acc['mape']))
-    training_size.append(i)
-
-mtx_signif = gbm.paired_ttest(list_acc)
-
-n = 1
-training_size = []
-p_direction = []
-
-st = np.array(df_asset['Adj Close'][test_start:test_start+n].reset_index(drop=True))
-s0 = np.array(df_asset['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
-direction = (st-s0) > 0
-
-for i in range(30,110,10):
-    sim_direction = ((gbm.multiple_one_day_GBM(df_asset, dt, i, n, sim, test_start).T - s0) > 0) == direction
-    p_direction.append(len(sim_direction[sim_direction==True])/sim)
-    training_size.append(i)
-
-all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
-                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+forecast_acc = gbm.eval_n_size_forecast_acc(df_asset, dt, size_start, size_end, n, sim, test_start)
+df_forecast = forecast_acc['df']
+mtx_signif = gbm.paired_ttest(forecast_acc['size_acc'])
+df_direction = gbm.eval_n_size_direction_acc(df_asset, dt, size_start, size_end, sim, test_start)
+all_accuracy = pd.merge(df_forecast, df_direction, on = 'training_size')
 
 #%%
 # 1 sample 30 day path
-n = 30
-dt = 1
-sim = 1
 n_train = 50
-test_start = 150
-sim_results = gbm.multiple_one_day_GBM(df_asset, dt, n_train, n, sim, test_start)
+
+sim_results = gbm.multiple_one_day_GBM(df_asset, dt, n_train, n, 1, test_start)
 
 df_sim = df_asset[['Date','Adj Close']].iloc[test_start-1:test_start+n-1]
 df_sim['GBM Sim'] = sim_results
@@ -106,80 +77,21 @@ plt.xticks(rotation = 45)
 #%%
 # stationary prolonged
 n = 120
-dt = 1
-sim = 10000
 test_start = n
-list_acc = []
-list_rmse = []
-list_nrmse = []
-list_mape = []
-training_size = []
 
-st = np.array(df_asset['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
-
-for i in range(30,110,10):
-    sim_results = gbm.multiple_one_day_GBM(df_asset, dt, i, n, sim, test_start)
-    acc = gbm.forecasting_acc(st, sim_results)
-    list_acc.append(acc)
-    list_rmse.append(np.mean(acc['rmse']))
-    list_nrmse.append(np.mean(acc['nrmse']))
-    list_mape.append(np.mean(acc['mape']))
-    training_size.append(i)
-
-mtx_signif = gbm.paired_ttest(list_acc)
-
-n = 1
-training_size = []
-p_direction = []
-
-st = np.array(df_asset['Adj Close'][test_start:test_start+n].reset_index(drop=True))
-s0 = np.array(df_asset['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
-direction = (st-s0) > 0
-
-for i in range(30,110,10):
-    sim_direction = ((gbm.multiple_one_day_GBM(df_asset, dt, i, n, sim, test_start).T - s0) > 0) == direction
-    p_direction.append(len(sim_direction[sim_direction==True])/sim)
-    training_size.append(i)
-
-all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
-                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+forecast_acc = gbm.eval_n_size_forecast_acc(df_asset, dt, size_start, size_end, n, sim, test_start)
+df_forecast = forecast_acc['df']
+mtx_signif = gbm.paired_ttest(forecast_acc['size_acc'])
+df_direction = gbm.eval_n_size_direction_acc(df_asset, dt, size_start, size_end, sim, test_start)
+all_accuracy = pd.merge(df_forecast, df_direction, on = 'training_size')
 
 #%%
 #non stationary 
 n = 120
-dt = 1
-sim = 10000
-list_acc = []
-list_rmse = []
-list_nrmse = []
-list_mape = []
-training_size = []
+test_start = n
 
-for i in range(30,110,10):
-    test_start = i+2
-    st = np.array(df_asset['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
-    sim_results = gbm.moving_GBM(df_asset, dt, i, n, sim, test_start)
-    acc = gbm.forecasting_acc(st, sim_results)
-    list_acc.append(acc)
-    list_rmse.append(np.mean(acc['rmse']))
-    list_nrmse.append(np.mean(acc['nrmse']))
-    list_mape.append(np.mean(acc['mape']))
-    training_size.append(i)
-
-mtx_signif = gbm.paired_ttest(list_acc)
-
-n = 1
-training_size = []
-p_direction = []
-
-for i in range(30,110,10):
-    test_start = i+2
-    st = np.array(df_asset['Adj Close'][test_start:test_start+n].reset_index(drop=True))
-    s0 = np.array(df_asset['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
-    direction = (st-s0) > 0
-    sim_direction = ((gbm.moving_GBM(df_asset, dt, i, n, sim, test_start).T - s0) > 0) == direction
-    p_direction.append(len(sim_direction[sim_direction==True])/sim)
-    training_size.append(i)
-
-all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
-                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
+forecast_acc = gbm.eval_n_size_forecast_acc(df_asset, dt, size_start, size_end, n, sim, test_start, method = 'moving')
+df_forecast = forecast_acc['df']
+mtx_signif = gbm.paired_ttest(forecast_acc['size_acc'])
+df_direction = gbm.eval_n_size_direction_acc(df_asset, dt, size_start, size_end, sim, test_start, method = 'moving')
+all_accuracy = pd.merge(df_forecast, df_direction, on = 'training_size')
