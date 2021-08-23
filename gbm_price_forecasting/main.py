@@ -12,8 +12,8 @@ import os
 from scipy.stats import norm
 import statsmodels.api as sm
 
-git_path = 'D:/Documents/Github/gbm_stock_prediction'
-os.chdir(git_path)
+git_path = 'D:/Documents/Github/gbm_price_forecasting'
+os.chdir(git_path + '/gbm_price_forecasting')
 #os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
 
 import gbm_helper_fxns as gbm
@@ -65,7 +65,7 @@ all_accuracy = pd.merge(df_forecast, df_direction, on = 'training_size')
 # 1 sample 30 day path
 n_train = 50
 
-sim_results = gbm.multiple_one_day_GBM(df_asset, dt, n_train, n, 1, test_start)
+sim_results = gbm.standard_GBM(df_asset, dt, n_train, n, 1, test_start)
 
 df_sim = df_asset[['Date','Adj Close']].iloc[test_start-1:test_start+n-1]
 df_sim['GBM Sim'] = sim_results

@@ -45,7 +45,7 @@ def forecasting_acc(actual, pred):
     d['nrmse'] = nrmse
     return(d)
 
-def multiple_one_day_GBM(df, dt, n_train, n, sim, test_start):
+def standard_GBM(df, dt, n_train, n, sim, test_start):
     train_start = test_start-n_train-2
     train_end = test_start-2
 
@@ -64,7 +64,7 @@ def moving_GBM(df, dt, n_train, n, sim, start_index):
     sim_results = np.zeros(shape=(0,sim))
     for i in range(0,n):
         test_start = start_index + i
-        sim_run = multiple_one_day_GBM(df, dt, n_train, 1, sim, test_start)
+        sim_run = standard_GBM(df, dt, n_train, 1, sim, test_start)
         sim_results = np.append(sim_results,sim_run, axis = 0)
     return(sim_results)
 
@@ -112,7 +112,7 @@ def eval_n_size_forecast_acc(df, dt, size_start, size_end, n, sim, test_start, m
             st = np.array(df['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
             sim_results = moving_GBM(df, dt, i, n, sim, test_start)
         else:
-            sim_results = multiple_one_day_GBM(df, dt, i, n, sim, test_start)
+            sim_results = standard_GBM(df, dt, i, n, sim, test_start)
         
         acc = forecasting_acc(st, sim_results)
         list_acc.append(acc)
@@ -149,7 +149,7 @@ def eval_n_size_direction_acc(df, dt, size_start, size_end, sim, test_start, met
             direction = (st-s0) > 0
             sim_direction = ((moving_GBM(df, dt, i, 1, sim, test_start).T - s0) > 0) == direction
         else:
-            sim_direction = ((multiple_one_day_GBM(df, dt, i, 1, sim, test_start).T - s0) > 0) == direction
+            sim_direction = ((standard_GBM(df, dt, i, 1, sim, test_start).T - s0) > 0) == direction
         p_direction.append(len(sim_direction[sim_direction==True])/sim)
         training_size.append(i)
     
