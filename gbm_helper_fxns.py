@@ -94,3 +94,65 @@ def paired_ttest(list_acc):
     mtx_signif['index'] = list(range(30,110,10))
     mtx_signif = mtx_signif.set_index('index')
     return(mtx_signif)
+
+def eval_n_size_forecast_acc(df, dt, size_start, size_end, n, sim, test_start, method = 'stationary'):
+    d = dict()
+    list_acc = []
+    list_rmse = []
+    list_nrmse = []
+    list_mape = []
+    training_size = []
+    
+    if method == 'stationary':
+        st = np.array(df['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
+        
+    for i in range(size_start,size_end,10):
+        if method != 'stationary':
+            test_start = i+2
+            st = np.array(df['Adj Close'][test_start-1:test_start-1+n].reset_index(drop=True))
+            sim_results = moving_GBM(df, dt, i, n, sim, test_start)
+        else:
+            sim_results = multiple_one_day_GBM(df, dt, i, n, sim, test_start)
+        
+        acc = forecasting_acc(st, sim_results)
+        list_acc.append(acc)
+        list_rmse.append(np.mean(acc['rmse']))
+        list_nrmse.append(np.mean(acc['nrmse']))
+        list_mape.append(np.mean(acc['mape']))
+        training_size.append(i)
+    
+    forecast_acc = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape)), 
+                                 columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE'])
+
+    d['training_size'] = training_size
+    d['size_acc'] = list_acc
+    d['size_mape'] = list_mape
+    d['size_rmse'] = list_rmse
+    d['size_nrmse'] = list_nrmse
+    d['df'] = forecast_acc
+    return(d)
+
+def eval_n_size_direction_acc(df, dt, size_start, size_end, sim, test_start, method = 'stationary'):
+    training_size = []
+    p_direction = []
+    
+    if method == 'stationary':
+        st = np.array(df['Adj Close'][test_start:test_start+1].reset_index(drop=True))
+        s0 = np.array(df['Adj Close'][test_start-1:test_start].reset_index(drop=True))
+        direction = (st-s0) > 0
+    
+    for i in range(size_start,size_end,10):
+        if method != 'stationary':
+            test_start = i+2
+            st = np.array(df['Adj Close'][test_start:test_start+1].reset_index(drop=True))
+            s0 = np.array(df['Adj Close'][test_start-1:test_start].reset_index(drop=True))
+            direction = (st-s0) > 0
+            sim_direction = ((moving_GBM(df, dt, i, 1, sim, test_start).T - s0) > 0) == direction
+        else:
+            sim_direction = ((multiple_one_day_GBM(df, dt, i, 1, sim, test_start).T - s0) > 0) == direction
+        p_direction.append(len(sim_direction[sim_direction==True])/sim)
+        training_size.append(i)
+    
+    direction_acc = pd.DataFrame(list(zip(training_size, p_direction)), 
+                                     columns = ['training_size','P(Correct Direction)'])
+    return(direction_acc)
