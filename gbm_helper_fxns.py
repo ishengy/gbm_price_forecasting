@@ -8,6 +8,7 @@ Created on Sun Aug 22 03:59:19 2021
 import numpy as np
 import pandas as pd
 from scipy.stats import gaussian_kde
+from scipy.stats import ttest_ind
 
 def calc_returns(df):
     curr = df['Adj Close']
@@ -79,3 +80,17 @@ def kde_GBM(df, dt, n_train, n, sim, test_start):
     s = np.exp(noise)
     sim_results = np.multiply(np.array(df['Adj Close'][test_start-1:test_start-1+n]),s.T).T
     return(sim_results)
+
+def paired_ttest(list_acc):
+    dim = len(list_acc)
+    mtx_signif = np.zeros((dim,dim))
+    for i in range(len(list_acc)):
+        group1 = list_acc[i]['mse']
+        for j in reversed(range(i+1,len(list_acc))):
+            group2 = list_acc[j]['mse']
+            mtx_signif[j][i] = ttest_ind(group1,group2)[1]
+    mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
+    mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
+    mtx_signif['index'] = list(range(30,110,10))
+    mtx_signif = mtx_signif.set_index('index')
+    return(mtx_signif)

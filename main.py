@@ -50,7 +50,7 @@ plt.title("Q-Q Plot")
 n = 30
 dt = 1
 sim = 10000
-test_start = n
+test_start = 150
 list_acc = []
 list_rmse = []
 list_nrmse = []
@@ -96,6 +96,7 @@ for i in range(30,110,10):
 all_accuracy = pd.DataFrame(list(zip(training_size, list_rmse, list_nrmse,list_mape, p_direction)), 
                                  columns = ['training_size','Expected RMSE','Expected NRMSE','Expected MAPE','P(Correct Direction)'])
 
+#%%
 # 1 sample 30 day path
 n = 30
 dt = 1
