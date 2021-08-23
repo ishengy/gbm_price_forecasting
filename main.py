@@ -12,14 +12,15 @@ import os
 from scipy.stats import norm
 import statsmodels.api as sm
 
-os.chdir('D:/Documents/Github/gbm_stock_prediction')
+git_path = 'D:/Documents/Github'
+os.chdir(git_path + '/gbm_stock_prediction')
 #os.chdir('/Users/isheng/Documents/Github/gbm_stock_prediction')
 
 import gbm_helper_fxns as gbm
 
-amd = pd.read_csv('AMD.csv')
-sp500 = pd.read_csv('SPY.csv')
-btc = pd.read_csv('BTC.csv')
+amd = pd.read_csv(git_path + '/data/AMD.csv')
+sp500 = pd.read_csv(git_path + '/data/SPY.csv')
+btc = pd.read_csv(git_path + '/data/BTC.csv')
 
 sp500['Date']  = pd.to_datetime(sp500['Date'])
 amd['Date']  = pd.to_datetime(amd['Date'])
