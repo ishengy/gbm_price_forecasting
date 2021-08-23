@@ -68,17 +68,7 @@ for i in range(30,110,10):
     list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
 
-dim = len(training_size)
-mtx_signif = np.zeros((dim,dim))
-for i in range(len(list_acc)):
-    group1 = list_acc[i]['mse']
-    for j in reversed(range(i+1,len(list_acc))):
-        group2 = list_acc[j]['mse']
-        mtx_signif[j][i] = ttest_ind(group1,group2)[1]
-mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
-mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
-mtx_signif['index'] = list(range(30,110,10))
-mtx_signif = mtx_signif.set_index('index')
+mtx_signif = gbm.paired_ttest(list_acc)
 
 n = 1
 training_size = []
@@ -136,17 +126,7 @@ for i in range(30,110,10):
     list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
 
-dim = len(training_size)
-mtx_signif = np.zeros((dim,dim))
-for i in range(len(list_acc)):
-    group1 = list_acc[i]['mse']
-    for j in reversed(range(i+1,len(list_acc))):
-        group2 = list_acc[j]['mse']
-        mtx_signif[j][i] = ttest_ind(group1,group2)[1]
-mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
-mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
-mtx_signif['index'] = list(range(30,110,10))
-mtx_signif = mtx_signif.set_index('index')
+mtx_signif = gbm.paired_ttest(list_acc)
 
 n = 1
 training_size = []
@@ -186,17 +166,7 @@ for i in range(30,110,10):
     list_mape.append(np.mean(acc['mape']))
     training_size.append(i)
 
-dim = len(training_size)
-mtx_signif = np.zeros((dim,dim))
-for i in range(len(list_acc)):
-    group1 = list_acc[i]['mse']
-    for j in reversed(range(i+1,len(list_acc))):
-        group2 = list_acc[j]['mse']
-        mtx_signif[j][i] = ttest_ind(group1,group2)[1]
-mtx_signif = mtx_signif + mtx_signif.T - np.diag(np.diag(mtx_signif))
-mtx_signif = pd.DataFrame(mtx_signif, columns = list(range(30,110,10)))
-mtx_signif['index'] = list(range(30,110,10))
-mtx_signif = mtx_signif.set_index('index')
+mtx_signif = gbm.paired_ttest(list_acc)
 
 n = 1
 training_size = []
