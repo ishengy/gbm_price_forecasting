@@ -1,1 +1,3 @@
-project_writeup.docx in progress
+<h1> Most Recent Write Up version: </h1>
+
+final_project_IvanSheng_DRAFT.pdf 
